@@ -69,7 +69,7 @@
 ```bash
 pkg update -y && pkg install -y curl
 curl -Lf -o "$HOME/install-distro-desktop.sh" \
-  https://github.com/JBP-340/termux-desktop-plasma.git
+  https://github.com/JBP-340/termux-desktop-plasma/blob/main/install-distro-desktop.sh
 chmod +x "$HOME/install-distro-desktop.sh"
 bash "$HOME/install-distro-desktop.sh"
 ```
