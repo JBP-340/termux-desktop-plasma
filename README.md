@@ -270,7 +270,7 @@ $PREFIX/var/lib/proot-distro/containers/<distro>/rootfs/
 
 ## Contribuir
 
-Este es el repositorio del proyecto: https://github.com/JBP-340/termux-desktop-arch-plasma
+Este es el repositorio del proyecto: https://github.com/JBP-340/termux-desktop-plasma
 
 Para subir un cambio (por ejemplo, haber corregido algo en `install-distro-desktop.sh`), desde Termux:
 
