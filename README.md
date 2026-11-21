@@ -339,3 +339,95 @@ startdesktop archlinux custom luna
 ```
 
 Si Cancelas en el resumen, verás `No se ha iniciado nada` y **termux-x11 ni pulseaudio habrán sido tocados**. Eso era justo lo que faltaba: nada se ejecuta hasta que la configuración está cerrada.
+
+si tienes algún problema con algún otro tipo de configuraciones o a retraso o falta de sincronización aquí están los parches para esos problemas 
+
+en Arch Linux ARM **no existe el meta-paquete `plasma`** (lo verifiqué: da 404). Por eso al instalar solo `plasma-desktop plasma-workspace kwin` te faltaron piezas del conjunto, y además los archivos de configuración se generaron en `/root` si arrancaste en modo root. Y el retraso es por composición por software dentro de proot.
+
+Corre esto una vez dentro de Termux:
+
+```sh
+proot-distro login archlinux -- /bin/bash -c '
+# 1) Asegurar pacman
+sed -i "s/^DownloadUser[[:space:]]*=.*/#DownloadUser disabled/" /etc/pacman.conf
+grep -q "^DisableSandbox" /etc/pacman.conf || sed -i "/^\[options\]/a DisableSandbox" /etc/pacman.conf
+grep -q "^DisableDownloadTimeout" /etc/pacman.conf || sed -i "/^\[options\]/a DisableDownloadTimeout" /etc/pacman.conf
+pacman -Syyu --noconfirm
+
+# 2) Lo que faltaba del escritorio
+pacman -S --noconfirm \
+  dolphin konsole kde-cli-tools kio-extras kio-admin ffmpegthumbs \
+  mesa libglvnd \
+  xdg-desktop-portal xdg-desktop-portal-kde \
+  flatpak packagekit-qt6 kde-gtk-config breeze
+
+# 3) Base de datos de apps / Flatpak
+update-desktop-database /usr/share/applications 2>/dev/null
+update-mime-database /usr/share/mime 2>/dev/null
+fc-cache -f >/dev/null 2>&1
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
+
+# 4) Inicializar la configuración en /home/user (NO en /root)
+id user >/dev/null 2>&1 || useradd -m -s /bin/bash user
+chown -R user:user /home/user
+mkdir -p /home/user/.config /home/user/.local/share
+[ -d /etc/skel ] && cp -r /etc/skel/. /home/user/ 2>/dev/null || true
+su user -c "XDG_CONFIG_HOME=/home/user/.config xdg-user-dirs-update" 2>/dev/null || true
+su user -c "XDG_CONFIG_HOME=/home/user/.config kbuildsycoca6 --noincremental" >/dev/null 2>&1 || true
+su user -c "balooctl6 disable" >/dev/null 2>&1 || true
+chown -R user:user /home/user/.config /home/user/.local
+
+# 5) Limpiar configs creadas por el arranque root anterior
+rm -f /root/.config/kwinrc /root/.config/plasmashellrc /root/.config/kdeglobals 2>/dev/null
+echo "LISTO"
+'
+```
+
+### Quitar el retraso (recomendado en proot)
+
+KWin con composición por software es lo que va lento en Android. Desactívala y baja los efectos:
+
+```sh
+proot-distro login archlinux -- /bin/bash -c '
+mkdir -p /home/user/.config
+cat > /home/user/.config/kwinrc <<EOF
+[Compositing]
+Enabled=false
+EOF
+cat > /home/user/.config/kdeglobals <<EOF
+[General]
+GraphicEffectsLevel=0
+EOF
+chown -R user:user /home/user/.config
+'
+```
+
+Para devolver los efectos, cambia `Enabled=false` por `Enabled=true`.
+
+### Arranca siempre en modo usuario
+
+```sh
+startdesktop archlinux user
+```
+
+Así todo se escribe en `/home/user/.config` y no en `/root`. Si antes iniciaste en root, Plasma dejó configuración allí y por eso parece que "faltan archivos".
+
+### Resultado esperado
+
+- **Dolphin** → administrador de archivos (instalado; antes no estaba).
+- **Konsole** → terminal integrada.
+- **Discover** → tienda con soporte Flatpak/Flathub y backend PackageKit.
+- **Portal KDE** → para que las apps Flatpak abran archivos y diálogos correctamente.
+- Menos lag al desactivar composición, `GraphicEffectsLevel=0` y `balooctl6 disable`.
+
+### Verificación rápida
+
+```sh
+proot-distro login archlinux --user user -- /bin/bash -c '
+for c in dolphin konsole discover flatpak; do command -v $c >/dev/null && echo "OK $c" || echo "FALTA $c"; done
+flatpak remote-list
+ls /home/user/.config/kwinrc
+'
+```
+
+Si sigue notándose algo raro en los colores o ventanas, dime qué dispositivo usas (Snapdragon, Dimensity, etc.) y ajusto el launcher para usar `zink`/`virgl` en vez de software puro.
