@@ -275,8 +275,8 @@ Este es el repositorio del proyecto: https://github.com/JBP-340/termux-desktop-a
 Para subir un cambio (por ejemplo, haber corregido algo en `install-distro-desktop.sh`), desde Termux:
 
 ```bash
-git clone https://github.com/JBP-340/termux-desktop-arch-plasma.git
-cd termux-desktop-arch-plasma
+git clone https://github.com/JBP-340/termux-desktop-plasma.git
+cd termux-desktop-plasma
 bash -n install-distro-desktop.sh
 git add .
 git commit -m "Actualiza el instalador"
@@ -286,7 +286,7 @@ git push
 La primera vez solo se hace `git clone`. Después, para volver a subir cambios:
 
 ```bash
-cd ~/termux-desktop-arch-plasma
+cd ~/termux-desktop-plasma
 git pull
 # edita el archivo...
 bash -n install-distro-desktop.sh
