@@ -209,7 +209,7 @@ Verificado: 148 instalados | 2 ausentes de verdad
 ## Estructura de archivos
 
 ```text
-termux-distro-desktop/
+termux-desktop-plasma/
 ├── README.md                       # esta documentación
 ├── install-distro-desktop.sh       # instalador v11 (ejecutable)
 ├── paste-block.sh                  # bloque único para copiar/pegar en Termux
