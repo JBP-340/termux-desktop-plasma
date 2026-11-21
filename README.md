@@ -268,22 +268,22 @@ $PREFIX/var/lib/proot-distro/containers/<distro>/rootfs/
 
 ---
 
-## Contribuir
+# Contribuir
 
-Este es el repositorio del proyecto: https://github.com/JBP-340/termux-desktop-plasma
+Repositorio: https://github.com/JBP-340/termux-desktop-plasma
 
-Para subir un cambio (por ejemplo, haber corregido algo en `install-distro-desktop.sh`), desde Termux:
+Para subir un cambio desde Termux:
 
 ```bash
 git clone https://github.com/JBP-340/termux-desktop-plasma.git
 cd termux-desktop-plasma
 bash -n install-distro-desktop.sh
 git add .
-git commit -m "Actualiza el instalador"
+git commit -m "Describe aquí lo que cambiaste"
 git push
 ```
 
-La primera vez solo se hace `git clone`. Después, para volver a subir cambios:
+Si ya tienes el repo descargado:
 
 ```bash
 cd ~/termux-desktop-plasma
@@ -295,9 +295,13 @@ git commit -m "Describe aquí lo que cambiaste"
 git push
 ```
 
+## Reglas
 
-
-Reglas: conserva el espíritu de v11 (sin logs en `/tmp`, progreso real, modos explícitos), actualiza el `CHANGELOG.md` y valida la sintaxis de los heredoc (`MANIFEST`, `EOS`, `LAUNCHER`, `INNER_EOF`) con `bash -n`.
+- Nunca reintroducir logs en `/tmp`.
+- Nunca depender de repos de terceros.
+- No cambiar el valor por defecto de «¿Reinstalar TODAS...?» a `S`.
+- Mantener la verificación real de paquetes y el progreso visible.
+- Actualizar `CHANGELOG.md` si cambia el comportamiento.
 
 ---
 
