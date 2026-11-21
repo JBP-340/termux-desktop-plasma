@@ -1,0 +1,11 @@
+# Archivos generados en el dispositivo
+installed-packages-*.txt
+proot-backups/
+*.log
+*.txt.tmp
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store
+*.swp
