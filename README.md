@@ -295,6 +295,102 @@ git commit -m "Describe aquí lo que cambiaste"
 git push
 ```
 
+alternativa a la instalaciones quizás automáticamente esto utiliza una distribución externa para poder terminar de instalar lo que es Arch linux pero tampoco se sabe de tantos errores debido a que tiene poco archivo o poca información sobre las instalaciones de su correspondencia de kde plasma todo eso quedaría en manos manuales el que el instalador que yo hice es que está arriba utiliza una base predefinida para instalarlo pero no posee todos los las aplicaciones correspondientes a kde plasma aquí le pasó el pequeño código que quiere que utiliza repositorio externo de `termux-desktop`
+
+```bash
+mkdir -p "$HOME/.termux-desktop-patch"
+curl -sLf https://raw.githubusercontent.com/sabamdarif/termux-desktop/main/distro-container-setup \
+  -o "$HOME/.termux-desktop-patch/distro-container-setup.upstream"
+
+cat > "$HOME/distro-container-setup" <<'PATCH'
+#!/data/data/com.termux/files/usr/bin/bash
+_UP="$HOME/.termux-desktop-patch/distro-container-setup.upstream"
+[[ -f "$_UP" ]] && source "$_UP" || source <(curl -sLf https://raw.githubusercontent.com/sabamdarif/termux-desktop/main/distro-container-setup)
+
+# 1) Arch SIEMPRE con menci/archlinuxarm, reutilizando el contenedor ya creado
+function setup_proot_distro() {
+	print_msg "${BOLD}Setting up ${C}proot-distro"
+	package_install_and_check "proot-distro"
+	banner
+	print_msg "${BOLD}Setting up Selected Linux Distro: ${C}${selected_distro}"
+	echo
+	print_to_config "selected_distro"
+	if [[ "$selected_distro" == "archlinux" ]]; then
+		local C="$TERMUX_PREFIX/var/lib/proot-distro/containers"
+		if [[ -e "$C/archlinux/rootfs/bin/sh" ]]; then
+			print_success "Reusing existing archlinux container (menci/archlinuxarm)"
+		elif proot-distro list -q 2>/dev/null | grep -qx archlinux; then
+			proot-distro remove archlinux
+			proot-distro install menci/archlinuxarm --name archlinux
+		elif proot-distro list -q 2>/dev/null | grep -qx archlinuxarm; then
+			proot-distro rename archlinuxarm archlinux
+		else
+			proot-distro install menci/archlinuxarm --name archlinux
+		fi
+	else
+		pd install "$selected_distro"
+	fi
+}
+
+# 2) Arreglar pacman ANTES de que el repo corra 'pacman -Syu'
+function pd_arch_pacman_fix() {
+	[[ "$selected_distro" == "archlinux" && "$selected_distro_type" == "proot" ]] || return 0
+	print_msg "${BOLD}Parchando pacman para proot (menci/archlinuxarm)..."
+	proot-distro login "$selected_distro" -- /bin/bash -c '
+		sed -i "s/^DownloadUser[[:space:]]*=.*/#DownloadUser disabled/" /etc/pacman.conf
+		grep -q "^DisableSandbox" /etc/pacman.conf || sed -i "/^\[options\]/a DisableSandbox" /etc/pacman.conf
+		sed -i "s/^ParallelDownloads[[:space:]]*=.*/ParallelDownloads = 2/" /etc/pacman.conf
+		grep -q "^DisableDownloadTimeout" /etc/pacman.conf || sed -i "/^\[options\]/a DisableDownloadTimeout" /etc/pacman.conf
+		pacman-key --init >/dev/null 2>&1
+		pacman-key --populate archlinuxarm >/dev/null 2>&1
+		pacman -Syyu --noconfirm
+	'
+}
+
+# 3) Lo nuestro DESPUÉS del bloque del repo (así no se pierde nada de lo que él instala)
+function pd_arch_final_patch() {
+	[[ "$selected_distro" == "archlinux" && "$selected_distro_type" == "proot" ]] || return 0
+	print_msg "${BOLD}Instalando Plasma + tienda + audio en archlinux..."
+	proot-distro login "$selected_distro" -- /bin/bash -c '
+		id user >/dev/null 2>&1 || useradd -m -s /bin/bash user
+		usermod -aG wheel,audio,video,storage user
+		passwd -d user
+		passwd -d root
+		mkdir -p /etc/sudoers.d
+		echo "user ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/user
+		chmod 440 /etc/sudoers.d/user
+		pacman -S --noconfirm plasma-desktop plasma-workspace kwin discover flatpak pulseaudio pulseaudio-alsa xdg-user-dirs
+		flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
+	'
+}
+
+# 4) Secuencia original del repo + nuestros 2 puntos de inserción
+function install_distro_container() {
+	set_distro_paths
+	setup_distro
+	pd_arch_pacman_fix
+	termux_home_link="--shared-home"
+	distro_basic_task
+	pd_arch_final_patch
+	if [[ "$CALL_FROM_CHANGE_DISTRO" == false ]]; then
+		if [[ "$enable_hw_acc" == "y" ]]; then hw_config; fi
+	fi
+	distro_zsh_setup
+	distro_terminal_utility_setup
+	distro_create_app_installer
+	add_add_to_menu
+	add_useful_repos
+	if [[ "$LITE_MODE" != "1" && "$LITE_MODE" != "true" ]]; then
+		install_some_required_pack
+	fi
+	distro_app_launch_setup
+}
+PATCH
+
+cd "$HOME"
+bash <(curl -Lf https://raw.githubusercontent.com/sabamdarif/termux-desktop/main/setup-termux-desktop)
+```
+
 ## Reglas
 
 - Nunca reintroducir logs en `/tmp`.
